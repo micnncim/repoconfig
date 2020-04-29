@@ -116,6 +116,7 @@ func (c *client) UpdateRepository(ctx context.Context, owner, repo string, opts 
 			"PATCH",
 			fmt.Sprintf("repos/%s/%s", owner, repo),
 			map[string]string{
+				"Content-Type":  "application/json",
 				"Authorization": fmt.Sprintf("token %s", c.githubToken),
 			},
 			opts,
