@@ -82,11 +82,6 @@ func (c *Client) DoRequest(ctx context.Context, method, path string, headers map
 		return nil, err
 	}
 
-	switch method {
-	case http.MethodPost, http.MethodPut, http.MethodPatch:
-		req.Header.Add("Content-Type", "application/json")
-	}
-
 	for key, value := range headers {
 		req.Header.Add(key, value)
 	}
