@@ -57,7 +57,7 @@ $ repoconfig micnncim micnncim/github-lab micnncim/github-actions-lab --delete-b
 ```
 
 ```console
-$ repoconfig monalisa
+$ repoconfig monalisa --delete-branch-on-merge=true
 2020-04-30T02:58:31.558+0900    INFO    app.github      successfully updated repository {"owner": "monalisa", "repo": "monalisa-repo1", "update_repository_options": {"has_issues":true,"has_projects":true,"has_wiki":true,"default_branch":"master","allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"delete_branch_on_merge":true}, "dry_run": false}
 2020-04-30T02:58:32.138+0900    INFO    app.github      successfully updated repository {"owner": "monalisa", "repo": "monalisa-repo2", "update_repository_options": {"has_issues":true,"has_projects":true,"has_wiki":true,"default_branch":"master","allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"delete_branch_on_merge":true}, "dry_run": false}
 ```
