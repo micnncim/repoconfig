@@ -18,8 +18,7 @@ import (
 type Client struct {
 	httpClient *http.Client
 
-	endpoint           *url.URL
-	username, password string
+	endpoint *url.URL
 
 	logger *zap.Logger
 }
