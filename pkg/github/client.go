@@ -4,24 +4,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/google/go-github/v31/github"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
-	"github.com/micnncim/repoconfig/pkg/http"
+	pkghttp "github.com/micnncim/repoconfig/pkg/http"
 )
 
 const APIBaseURL = "https://api.github.com"
 
 type Client interface {
-	ListRepositories(ctx context.Context, owner string) ([]*github.Repository, error)
-	UpdateRepository(ctx context.Context, owner, repo string, opts *UpdateRepositoryOptions) error
+	GetRepository(ctx context.Context, owner, repo string) (*github.Repository, error)
+	UpdateRepository(ctx context.Context, owner, repo string, input *UpdateRepositoryInput) error
 }
 
 type client struct {
 	githubClient *github.Client
-	httpClient   *http.Client
+	httpClient   *pkghttp.Client
 
 	githubToken string
 
@@ -29,6 +30,9 @@ type client struct {
 
 	logger *zap.Logger
 }
+
+// Guarantee *client implements Client.
+var _ Client = (*client)(nil)
 
 type Option func(*client)
 
@@ -40,7 +44,7 @@ func WithLogger(l *zap.Logger) Option {
 	return func(c *client) { c.logger = l.Named("github") }
 }
 
-func NewClient(token string, httpClient *http.Client, opts ...Option) (Client, error) {
+func NewClient(token string, httpClient *pkghttp.Client, opts ...Option) (Client, error) {
 	if token == "" {
 		return nil, errors.New("missing github token")
 	}
@@ -63,69 +67,46 @@ func NewClient(token string, httpClient *http.Client, opts ...Option) (Client, e
 	return c, nil
 }
 
-func (c *client) ListRepositories(ctx context.Context, owner string) ([]*github.Repository, error) {
-	logger := c.logger.With(zap.String("owner", owner))
-
-	logger.Debug("started fetching repositories")
-	defer logger.Debug("finished fetching repositories")
-
-	opts := github.ListOptions{
-		PerPage: 100,
-	}
-
-	var allRepos []*github.Repository
-
-	for {
-		repos, resp, err := c.githubClient.Repositories.List(ctx, owner, &github.RepositoryListOptions{
-			Affiliation: "owner",
-			ListOptions: opts,
-		})
-		if err != nil {
-			c.logger.Error("failed to fetch repositories", zap.Error(err))
-			return nil, err
-		}
-
-		for _, repo := range repos {
-			c.logger.Debug("fetched repository",
-				zap.String("repo", repo.GetName()),
-			)
-		}
-
-		allRepos = append(allRepos, repos...)
-
-		if resp.NextPage == 0 {
-			break
-		}
-		opts.Page = resp.NextPage
-	}
-
-	return allRepos, nil
-}
-
-func (c *client) UpdateRepository(ctx context.Context, owner, repo string, opts *UpdateRepositoryOptions) error {
+func (c *client) GetRepository(ctx context.Context, owner, repo string) (*github.Repository, error) {
 	logger := c.logger.With(
 		zap.String("owner", owner),
 		zap.String("repo", repo),
-		zap.Any("update_repository_options", opts),
+	)
+
+	repository, _, err := c.githubClient.Repositories.Get(ctx, owner, repo)
+	if err != nil {
+		logger.Error("failed to get repository", zap.Error(err))
+		return nil, err
+	}
+
+	logger.Debug("successfully fetched repository", zap.Any("repository", repository))
+	return repository, nil
+}
+
+func (c *client) UpdateRepository(ctx context.Context, owner, repo string, input *UpdateRepositoryInput) error {
+	logger := c.logger.With(
+		zap.String("owner", owner),
+		zap.String("repo", repo),
+		zap.Any("update_repository_input", input),
 		zap.Bool("dry_run", c.dryRun),
 	)
 
 	if !c.dryRun {
 		if _, err := c.httpClient.DoRequest(
 			ctx,
-			"PATCH",
+			http.MethodPatch,
 			fmt.Sprintf("repos/%s/%s", owner, repo),
 			map[string]string{
 				"Content-Type":  "application/json",
 				"Authorization": fmt.Sprintf("token %s", c.githubToken),
 			},
-			opts,
+			input,
 		); err != nil {
 			logger.Error("failed to update repository", zap.Error(err))
 			return err
 		}
 	}
 
-	logger.Info("successfully updated repository")
+	logger.Debug("successfully updated repository")
 	return nil
 }
