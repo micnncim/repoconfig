@@ -5,6 +5,8 @@
 [![pkg.go.dev][pkg.go.dev-badge]][pkg.go.dev]
 [![license][license-badge]][license]
 
+![demo](./docs/assets/demo.gif)
+
 A CLI to update a GitHub repository config in the interactive way.
 
 ## Prerequisites
