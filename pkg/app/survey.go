@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/micnncim/repoconfig/pkg/github"
 	"github.com/micnncim/repoconfig/pkg/survey"
 )

@@ -7,9 +7,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"github.com/spf13/cobra"
+
 	"github.com/micnncim/repoconfig/pkg/github"
 	"github.com/micnncim/repoconfig/pkg/survey"
-	"github.com/spf13/cobra"
 )
 
 func Test_app_run(t *testing.T) {
