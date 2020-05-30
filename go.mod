@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.0.7
+	github.com/briandowns/spinner v1.11.1
 	github.com/fatih/color v1.9.0
 	github.com/google/go-cmp v0.4.0
 	github.com/google/go-github/v31 v31.0.0

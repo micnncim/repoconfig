@@ -1,11 +1,13 @@
 package app
 
 import (
+	"io/ioutil"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/micnncim/repoconfig/pkg/github"
+	"github.com/micnncim/repoconfig/pkg/spinner"
 	"github.com/micnncim/repoconfig/pkg/survey"
 	"github.com/spf13/cobra"
 )
@@ -83,6 +85,7 @@ func Test_app_run(t *testing.T) {
 
 				a := &app{
 					githubClient: githubClient,
+					spinner:      spinner.New(ioutil.Discard),
 				}
 
 				if err := a.run(&cobra.Command{}, []string{fakeOwner, fakeRepo}); (err != nil) != tt.wantErr {

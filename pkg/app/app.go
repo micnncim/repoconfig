@@ -6,16 +6,19 @@ import (
 	"os"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/micnncim/repoconfig/pkg/github"
 	"github.com/micnncim/repoconfig/pkg/http"
 	"github.com/micnncim/repoconfig/pkg/logging"
+	"github.com/micnncim/repoconfig/pkg/spinner"
 	"github.com/micnncim/repoconfig/pkg/survey"
 )
 
 type app struct {
 	githubClient github.Client
+	spinner      spinner.Spinner
 }
 
 type repository struct {
@@ -48,6 +51,7 @@ func NewCommand() (*cobra.Command, error) {
 
 	app := &app{
 		githubClient: githubClient,
+		spinner:      spinner.New(os.Stdout),
 	}
 
 	cmd := &cobra.Command{
@@ -68,7 +72,7 @@ func (a *app) run(_ *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	repository, err := a.githubClient.GetRepository(ctx, owner, repo)
+	repository, err := a.getRepository(ctx, owner, repo)
 	if err != nil {
 		return err
 	}
@@ -77,7 +81,7 @@ func (a *app) run(_ *cobra.Command, args []string) error {
 	switch err {
 	case nil:
 	case ErrRepositoryNoChange:
-		warnf("\nrepository does not change")
+		warnf("\n🤖 %s/%s has not been changed\n", owner, repo)
 		return nil
 	default:
 		return err
@@ -90,4 +94,11 @@ func (a *app) run(_ *cobra.Command, args []string) error {
 	infof("\n🚀 https://github.com/%s/%s has been updated\n", owner, repo)
 
 	return nil
+}
+
+func (a *app) getRepository(ctx context.Context, owner, repo string) (*github.Repository, error) {
+	a.spinner.Start(color.CyanString(" 🤖 fetching %s/%s...", owner, repo))
+	defer a.spinner.Stop("")
+
+	return a.githubClient.GetRepository(ctx, owner, repo)
 }
