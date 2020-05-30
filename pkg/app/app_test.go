@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"io/ioutil"
 	"log"
 	"testing"
@@ -16,6 +17,8 @@ import (
 
 func Test_app_run(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
+
+	fakeOwner := "fake-owner"
 
 	orgAskUpdateRepositoryInput := askUpdateRepositoryInput
 	defer func() {
@@ -80,23 +83,27 @@ func Test_app_run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			askUpdateRepositoryInput = tt.fakeAskUpdateRepositoryInput
 
-			githubClient := github.NewFakeClient()
+			fakeGithubClient := github.NewFakeClient()
 			if tt.fakeRepo != nil {
-				githubClient.Repos[tt.fakeRepo.Name] = tt.fakeRepo
+				fakeGithubClient.SetRepository(tt.fakeRepo.Name, tt.fakeRepo)
 			}
 
 			a := &app{
-				githubClient: githubClient,
+				githubClient: fakeGithubClient,
 				spinner:      spinner.New(ioutil.Discard),
 			}
 
-			if err := a.run(&cobra.Command{}, []string{"fake-owner", tt.fakeRepo.Name}); (err != nil) != tt.wantErr {
+			if err := a.run(&cobra.Command{}, []string{fakeOwner, tt.fakeRepo.Name}); (err != nil) != tt.wantErr {
 				t.Errorf("err = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			got := githubClient.Repos[tt.fakeRepo.Name]
+			got, err := fakeGithubClient.GetRepository(context.Background(), fakeOwner, tt.fakeRepo.Name)
+			if err != nil {
+				t.Errorf("err: %v", err)
+				return
+			}
 			if diff := cmp.Diff(tt.want, got); diff != "" {
-				t.Fatalf("(-want +got):\n%s", diff)
+				t.Errorf("(-want +got):\n%s", diff)
 			}
 		})
 	}
