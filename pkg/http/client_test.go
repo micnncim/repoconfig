@@ -35,7 +35,7 @@ func TestClient_DoRequest(t *testing.T) {
 
 			endpoint, err := url.Parse(srv.URL)
 			if err != nil {
-				t.Fatalf("failed to parse url: %v", err)
+				t.Errorf("failed to parse url: %v", err)
 			}
 			c := &Client{
 				endpoint: endpoint,
@@ -44,7 +44,7 @@ func TestClient_DoRequest(t *testing.T) {
 
 			got, err := c.DoRequest(context.Background(), tt.args.method, tt.args.path, map[string]string{}, tt.args.body)
 			if err != nil {
-				t.Fatalf("err: %v", err)
+				t.Errorf("err: %v", err)
 			}
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("(-want +got):\n%s", diff)
