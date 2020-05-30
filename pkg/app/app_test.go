@@ -2,21 +2,18 @@ package app
 
 import (
 	"io/ioutil"
+	"log"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/micnncim/repoconfig/pkg/github"
-	"github.com/micnncim/repoconfig/pkg/spinner"
 	"github.com/micnncim/repoconfig/pkg/survey"
 	"github.com/spf13/cobra"
 )
 
 func Test_app_run(t *testing.T) {
-	var (
-		fakeOwner = "fake-owner"
-		fakeRepo  = "fake-repo"
-	)
+	log.SetOutput(ioutil.Discard)
 
 	tests := []struct {
 		name                         string
@@ -28,18 +25,21 @@ func Test_app_run(t *testing.T) {
 		{
 			name: "update repo",
 			fakeRepo: &github.Repository{
+				Name:             "fake-repo-1",
 				Description:      "fake description",
 				Private:          false,
 				AllowMergeCommit: true,
 			},
 			fakeAskUpdateRepositoryInput: func(survey.Surveyor, *github.Repository) (*github.Repository, error) {
 				return &github.Repository{
+					Name:             "fake-repo-1",
 					Description:      "new description",
 					Private:          true,
 					AllowMergeCommit: false,
 				}, nil
 			},
 			want: &github.Repository{
+				Name:             "fake-repo-1",
 				Description:      "new description",
 				Private:          true,
 				AllowMergeCommit: false,
@@ -49,6 +49,7 @@ func Test_app_run(t *testing.T) {
 		{
 			name: "not update repo",
 			fakeRepo: &github.Repository{
+				Name:             "fake-repo-2",
 				Description:      "fake description",
 				Private:          false,
 				AllowMergeCommit: true,
@@ -57,6 +58,7 @@ func Test_app_run(t *testing.T) {
 				return nil, ErrRepositoryNoChange
 			},
 			want: &github.Repository{
+				Name:             "fake-repo-2",
 				Description:      "fake description",
 				Private:          false,
 				AllowMergeCommit: true,
@@ -76,23 +78,20 @@ func Test_app_run(t *testing.T) {
 					askUpdateRepositoryInput = orgAskUpdateRepositoryInput
 				}()
 
-				githubClient := &github.FakeClient{
-					Repos: make(map[string]*github.Repository),
-				}
+				githubClient := github.NewFakeClient()
 				if tt.fakeRepo != nil {
-					githubClient.Repos[fakeRepo] = tt.fakeRepo
+					githubClient.Repos[tt.fakeRepo.Name] = tt.fakeRepo
 				}
 
 				a := &app{
 					githubClient: githubClient,
-					spinner:      spinner.New(ioutil.Discard),
 				}
 
-				if err := a.run(&cobra.Command{}, []string{fakeOwner, fakeRepo}); (err != nil) != tt.wantErr {
+				if err := a.run(&cobra.Command{}, []string{"fake-owner", tt.fakeRepo.Name}); (err != nil) != tt.wantErr {
 					t.Errorf("err = %v, wantErr %v", err, tt.wantErr)
 				}
 
-				got := githubClient.Repos[fakeRepo]
+				got := githubClient.Repos[tt.fakeRepo.Name]
 				if diff := cmp.Diff(tt.want, got); diff != "" {
 					t.Fatalf("(-want +got):\n%s", diff)
 				}
