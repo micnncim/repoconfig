@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/micnncim/repoconfig/pkg/github"
+	"github.com/micnncim/repoconfig/pkg/spinner"
 	"github.com/micnncim/repoconfig/pkg/survey"
 )
 
@@ -86,6 +87,7 @@ func Test_app_run(t *testing.T) {
 
 			a := &app{
 				githubClient: githubClient,
+				spinner:      spinner.New(ioutil.Discard),
 			}
 
 			if err := a.run(&cobra.Command{}, []string{"fake-owner", tt.fakeRepo.Name}); (err != nil) != tt.wantErr {

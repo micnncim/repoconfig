@@ -6,16 +6,19 @@ import (
 	"os"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/micnncim/repoconfig/pkg/github"
 	"github.com/micnncim/repoconfig/pkg/http"
 	"github.com/micnncim/repoconfig/pkg/logging"
+	"github.com/micnncim/repoconfig/pkg/spinner"
 	"github.com/micnncim/repoconfig/pkg/survey"
 )
 
 type app struct {
 	githubClient github.Client
+	spinner      spinner.Spinner
 }
 
 type repository struct {
@@ -48,6 +51,7 @@ func NewCommand() (*cobra.Command, error) {
 
 	app := &app{
 		githubClient: githubClient,
+		spinner:      spinner.New(os.Stdout),
 	}
 
 	cmd := &cobra.Command{
@@ -93,5 +97,8 @@ func (a *app) run(_ *cobra.Command, args []string) error {
 }
 
 func (a *app) getRepository(ctx context.Context, owner, repo string) (*github.Repository, error) {
+	a.spinner.Start(color.CyanString("🤖 fetching %s/%s...", owner, repo))
+	defer a.spinner.Stop()
+
 	return a.githubClient.GetRepository(ctx, owner, repo)
 }
