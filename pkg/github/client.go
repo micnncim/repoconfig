@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 
 	"github.com/google/go-github/v31/github"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
-	pkghttp "github.com/micnncim/repoconfig/pkg/http"
+	"github.com/micnncim/repoconfig/pkg/http"
 )
 
 const APIBaseURL = "https://api.github.com"
@@ -22,7 +21,7 @@ type Client interface {
 
 type client struct {
 	githubClient *github.Client
-	httpClient   *pkghttp.Client
+	httpClient   *http.Client
 
 	githubToken string
 
@@ -38,7 +37,7 @@ func WithLogger(l *zap.Logger) Option {
 	return func(c *client) { c.logger = l.Named("github") }
 }
 
-func NewClient(token string, httpClient *pkghttp.Client, opts ...Option) (Client, error) {
+func NewClient(token string, httpClient *http.Client, opts ...Option) (Client, error) {
 	if token == "" {
 		return nil, errors.New("missing github token")
 	}
