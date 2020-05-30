@@ -3,41 +3,51 @@ package app
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/micnncim/repoconfig/pkg/github"
 	"github.com/micnncim/repoconfig/pkg/http"
 	"github.com/micnncim/repoconfig/pkg/logging"
+	"github.com/micnncim/repoconfig/pkg/survey"
 )
 
 type app struct {
-	writer    io.Writer
-	logLevel  logging.Level
-	logFormat logging.Format
-
-	githubAPIBaseURL string
-	githubToken      string
-
-	dryRun bool
-	debug  bool
+	githubClient github.Client
 }
 
 type repository struct {
 	owner, repo string
 }
 
-func NewCommand() *cobra.Command {
+func NewCommand() (*cobra.Command, error) {
+	logger, err := logging.NewLogger(os.Stderr, logging.LevelInfo, logging.FormatColorConsole)
+	if err != nil {
+		return nil, err
+	}
+	logger = logger.Named("app")
+
+	httpClient, err := http.NewClient(
+		github.APIBaseURL,
+		http.WithLogger(logger),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	githubClient, err := github.NewClient(
+		os.Getenv("GITHUB_TOKEN"),
+		httpClient,
+		github.WithLogger(logger),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	app := &app{
-		writer:           os.Stderr,
-		logLevel:         logging.LevelInfo,
-		logFormat:        logging.FormatColorConsole,
-		githubAPIBaseURL: github.APIBaseURL,
-		githubToken:      os.Getenv("GITHUB_TOKEN"),
+		githubClient: githubClient,
 	}
 
 	cmd := &cobra.Command{
@@ -46,10 +56,7 @@ func NewCommand() *cobra.Command {
 		RunE:  app.run,
 	}
 
-	cmd.Flags().BoolVar(&app.dryRun, "dry-run", false, "Whether user enable dry-run mode")
-	cmd.Flags().BoolVar(&app.debug, "debug", false, "Whether user enable debug mode")
-
-	return cmd
+	return cmd, nil
 }
 
 func (a *app) run(_ *cobra.Command, args []string) error {
@@ -58,56 +65,33 @@ func (a *app) run(_ *cobra.Command, args []string) error {
 	}
 	owner, repo := args[0], args[1]
 
-	if a.debug {
-		a.logLevel = logging.LevelDebug
-	}
-
-	logger, err := logging.NewLogger(a.writer, a.logLevel, a.logFormat)
-	if err != nil {
-		return err
-	}
-	logger = logger.Named("app")
-
-	httpClient, err := http.NewClient(
-		a.githubAPIBaseURL,
-		http.WithLogger(logger),
-	)
-	if err != nil {
-		return err
-	}
-
-	githubClient, err := github.NewClient(
-		a.githubToken,
-		httpClient,
-		github.WithDryRun(a.dryRun),
-		github.WithLogger(logger),
-	)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	repository, err := githubClient.GetRepository(ctx, owner, repo)
+	repository, err := a.getRepository(ctx, owner, repo)
 	if err != nil {
 		return err
 	}
 
-	input, err := askUpdateRepositoryInput(repository)
-	if err != nil {
+	input, err := askUpdateRepositoryInput(survey.NewSurveyor(), repository)
+	switch err {
+	case nil:
+	case ErrRepositoryNoChange:
+		warnf("\n🤖 %s/%s has not been changed\n", owner, repo)
+		return nil
+	default:
 		return err
 	}
 
-	if err := githubClient.UpdateRepository(ctx, owner, repo, input); err != nil {
+	if err := a.githubClient.UpdateRepository(ctx, owner, repo, input); err != nil {
 		return err
 	}
 
-	infof("🚀 %s has been updated\n", repository.GetHTMLURL())
+	infof("\n🚀 https://github.com/%s/%s has been updated\n", owner, repo)
 
 	return nil
 }
 
-func infof(format string, a ...interface{}) {
-	color.New(color.FgBlue).Printf(format, a...)
+func (a *app) getRepository(ctx context.Context, owner, repo string) (*github.Repository, error) {
+	return a.githubClient.GetRepository(ctx, owner, repo)
 }

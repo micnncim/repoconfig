@@ -1,15 +1,20 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"log"
 
 	"github.com/micnncim/repoconfig/pkg/app"
 )
 
 func main() {
-	if err := app.NewCommand().Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to execute command: %s", err)
-		os.Exit(1)
+	log.SetFlags(0)
+
+	cmd, err := app.NewCommand()
+	if err != nil {
+		log.Fatalf("failed to set up command: %s", err)
+	}
+
+	if err := cmd.Execute(); err != nil {
+		log.Fatalf("failed to execute command: %s", err)
 	}
 }
