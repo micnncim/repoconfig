@@ -16,6 +16,11 @@ import (
 func Test_app_run(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
 
+	orgAskUpdateRepositoryInput := askUpdateRepositoryInput
+	defer func() {
+		askUpdateRepositoryInput = orgAskUpdateRepositoryInput
+	}()
+
 	tests := []struct {
 		name                         string
 		fakeRepo                     *github.Repository
@@ -72,31 +77,25 @@ func Test_app_run(t *testing.T) {
 		tt := tt
 
 		t.Run(tt.name, func(t *testing.T) {
-			func() {
-				orgAskUpdateRepositoryInput := askUpdateRepositoryInput
-				askUpdateRepositoryInput = tt.fakeAskUpdateRepositoryInput
-				defer func() {
-					askUpdateRepositoryInput = orgAskUpdateRepositoryInput
-				}()
+			askUpdateRepositoryInput = tt.fakeAskUpdateRepositoryInput
 
-				githubClient := github.NewFakeClient()
-				if tt.fakeRepo != nil {
-					githubClient.Repos[tt.fakeRepo.Name] = tt.fakeRepo
-				}
+			githubClient := github.NewFakeClient()
+			if tt.fakeRepo != nil {
+				githubClient.Repos[tt.fakeRepo.Name] = tt.fakeRepo
+			}
 
-				a := &app{
-					githubClient: githubClient,
-				}
+			a := &app{
+				githubClient: githubClient,
+			}
 
-				if err := a.run(&cobra.Command{}, []string{"fake-owner", tt.fakeRepo.Name}); (err != nil) != tt.wantErr {
-					t.Errorf("err = %v, wantErr %v", err, tt.wantErr)
-				}
+			if err := a.run(&cobra.Command{}, []string{"fake-owner", tt.fakeRepo.Name}); (err != nil) != tt.wantErr {
+				t.Errorf("err = %v, wantErr %v", err, tt.wantErr)
+			}
 
-				got := githubClient.Repos[tt.fakeRepo.Name]
-				if diff := cmp.Diff(tt.want, got); diff != "" {
-					t.Fatalf("(-want +got):\n%s", diff)
-				}
-			}()
+			got := githubClient.Repos[tt.fakeRepo.Name]
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Fatalf("(-want +got):\n%s", diff)
+			}
 		})
 	}
 }
