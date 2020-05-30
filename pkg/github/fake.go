@@ -24,7 +24,7 @@ func NewFakeClient() *FakeClient {
 }
 
 // GetRepository implements Client.
-func (c *FakeClient) GetRepository(ctx context.Context, _, repo string) (*Repository, error) {
+func (c *FakeClient) GetRepository(_ context.Context, _, repo string) (*Repository, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -37,7 +37,7 @@ func (c *FakeClient) GetRepository(ctx context.Context, _, repo string) (*Reposi
 }
 
 // UpdateRepository implements Client.
-func (c *FakeClient) UpdateRepository(ctx context.Context, _, repo string, repository *Repository) error {
+func (c *FakeClient) UpdateRepository(_ context.Context, _, repo string, repository *Repository) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
