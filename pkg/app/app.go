@@ -8,14 +8,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	pkggithub "github.com/micnncim/repoconfig/pkg/github"
+	"github.com/micnncim/repoconfig/pkg/github"
 	"github.com/micnncim/repoconfig/pkg/http"
 	"github.com/micnncim/repoconfig/pkg/logging"
 	"github.com/micnncim/repoconfig/pkg/survey"
 )
 
 type app struct {
-	githubClient pkggithub.Client
+	githubClient github.Client
 }
 
 type repository struct {
@@ -30,17 +30,17 @@ func NewCommand() (*cobra.Command, error) {
 	logger = logger.Named("app")
 
 	httpClient, err := http.NewClient(
-		pkggithub.APIBaseURL,
+		github.APIBaseURL,
 		http.WithLogger(logger),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	githubClient, err := pkggithub.NewClient(
+	githubClient, err := github.NewClient(
 		os.Getenv("GITHUB_TOKEN"),
 		httpClient,
-		pkggithub.WithLogger(logger),
+		github.WithLogger(logger),
 	)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,12 @@ func (a *app) run(_ *cobra.Command, args []string) error {
 	}
 
 	input, err := askUpdateRepositoryInput(survey.NewSurveyor(), repository)
-	if err != nil {
+	switch err {
+	case nil:
+	case ErrRepositoryNoChange:
+		warnf("\nrepository does not change")
+		return nil
+	default:
 		return err
 	}
 
@@ -82,7 +87,7 @@ func (a *app) run(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	infof("\n🚀 %s has been updated\n", repository.GetHTMLURL())
+	infof("\n🚀 https://github.com/%s/%s has been updated\n", owner, repo)
 
 	return nil
 }

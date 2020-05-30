@@ -1,11 +1,14 @@
 package app
 
 import (
-	"github.com/google/go-github/v31/github"
+	"errors"
 
-	pkggithub "github.com/micnncim/repoconfig/pkg/github"
+	"github.com/google/go-cmp/cmp"
+	"github.com/micnncim/repoconfig/pkg/github"
 	"github.com/micnncim/repoconfig/pkg/survey"
 )
+
+var ErrRepositoryNoChange = errors.New("repository will not change")
 
 const (
 	surveyKeyName                = "Name"
@@ -60,7 +63,7 @@ type updateRepositoryOptions struct {
 	Archived            bool
 }
 
-var askUpdateRepositoryInput = func(s survey.Surveyor, currentRepo *github.Repository) (*pkggithub.UpdateRepositoryInput, error) {
+var askUpdateRepositoryInput = func(s survey.Surveyor, currentRepo *github.Repository) (*github.Repository, error) {
 	resp, err := s.AskMultiSelect(askUpdateRepositoryInputMessage, surveyUpdateRepositoryOptions)
 	if err != nil {
 		return nil, err
@@ -83,21 +86,22 @@ var askUpdateRepositoryInput = func(s survey.Surveyor, currentRepo *github.Repos
 		Archived:            contains(surveyKeyArchived, resp),
 	}
 
-	input := &pkggithub.UpdateRepositoryInput{
-		Name:                currentRepo.GetName(),
-		Description:         currentRepo.GetDescription(),
-		Homepage:            currentRepo.GetHomepage(),
-		Private:             currentRepo.GetPrivate(),
-		Visibility:          currentRepo.GetVisibility(),
-		HasIssues:           currentRepo.GetHasIssues(),
-		HasProjects:         currentRepo.GetHasProjects(),
-		HasWiki:             currentRepo.GetHasWiki(),
-		DefaultBranch:       currentRepo.GetDefaultBranch(),
-		AllowSquashMerge:    currentRepo.GetAllowSquashMerge(),
-		AllowMergeCommit:    currentRepo.GetAllowMergeCommit(),
-		AllowRebaseMerge:    currentRepo.GetAllowRebaseMerge(),
-		DeleteBranchOnMerge: currentRepo.GetDeleteBranchOnMerge(),
-		Archived:            currentRepo.GetArchived(),
+	// Copy github.Repository to avoid changing the given currentRepo.
+	input := &github.Repository{
+		Name:                currentRepo.Name,
+		Description:         currentRepo.Description,
+		Homepage:            currentRepo.Homepage,
+		Private:             currentRepo.Private,
+		Visibility:          currentRepo.Visibility,
+		HasIssues:           currentRepo.HasIssues,
+		HasProjects:         currentRepo.HasProjects,
+		HasWiki:             currentRepo.HasWiki,
+		DefaultBranch:       currentRepo.DefaultBranch,
+		AllowSquashMerge:    currentRepo.AllowSquashMerge,
+		AllowMergeCommit:    currentRepo.AllowMergeCommit,
+		AllowRebaseMerge:    currentRepo.AllowRebaseMerge,
+		DeleteBranchOnMerge: currentRepo.DeleteBranchOnMerge,
+		Archived:            currentRepo.Archived,
 	}
 
 	if opts.Name {
@@ -201,6 +205,10 @@ var askUpdateRepositoryInput = func(s survey.Surveyor, currentRepo *github.Repos
 			return nil, err
 		}
 		input.Archived = v == "true"
+	}
+
+	if diff := cmp.Diff(input, currentRepo); diff == "" {
+		return nil, ErrRepositoryNoChange
 	}
 
 	return input, nil

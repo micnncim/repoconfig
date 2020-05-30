@@ -16,8 +16,8 @@ import (
 const APIBaseURL = "https://api.github.com"
 
 type Client interface {
-	GetRepository(ctx context.Context, owner, repo string) (*github.Repository, error)
-	UpdateRepository(ctx context.Context, owner, repo string, input *UpdateRepositoryInput) error
+	GetRepository(ctx context.Context, owner, repo string) (*Repository, error)
+	UpdateRepository(ctx context.Context, owner, repo string, input *Repository) error
 }
 
 type client struct {
@@ -26,8 +26,6 @@ type client struct {
 
 	githubToken string
 
-	dryRun bool
-
 	logger *zap.Logger
 }
 
@@ -35,10 +33,6 @@ type client struct {
 var _ Client = (*client)(nil)
 
 type Option func(*client)
-
-func WithDryRun(v bool) Option {
-	return func(c *client) { c.dryRun = v }
-}
 
 func WithLogger(l *zap.Logger) Option {
 	return func(c *client) { c.logger = l.Named("github") }
@@ -61,13 +55,17 @@ func NewClient(token string, httpClient *pkghttp.Client, opts ...Option) (Client
 		githubToken:  token,
 		logger:       zap.NewNop(),
 	}
+
 	for _, opt := range opts {
 		opt(c)
 	}
+
 	return c, nil
 }
 
-func (c *client) GetRepository(ctx context.Context, owner, repo string) (*github.Repository, error) {
+// GetRepository gets a GitHub repository.
+// https://developer.github.com/v3/repos/#get-a-repository
+func (c *client) GetRepository(ctx context.Context, owner, repo string) (*Repository, error) {
 	logger := c.logger.With(
 		zap.String("owner", owner),
 		zap.String("repo", repo),
@@ -80,33 +78,49 @@ func (c *client) GetRepository(ctx context.Context, owner, repo string) (*github
 	}
 
 	logger.Debug("successfully fetched repository", zap.Any("repository", repository))
-	return repository, nil
+
+	return &Repository{
+		Name:                repository.GetName(),
+		Description:         repository.GetDescription(),
+		Homepage:            repository.GetHomepage(),
+		Private:             repository.GetPrivate(),
+		Visibility:          repository.GetVisibility(),
+		HasIssues:           repository.GetHasIssues(),
+		HasProjects:         repository.GetHasProjects(),
+		HasWiki:             repository.GetHasWiki(),
+		DefaultBranch:       repository.GetDefaultBranch(),
+		AllowMergeCommit:    repository.GetAllowMergeCommit(),
+		AllowRebaseMerge:    repository.GetAllowRebaseMerge(),
+		AllowSquashMerge:    repository.GetAllowSquashMerge(),
+		DeleteBranchOnMerge: repository.GetDeleteBranchOnMerge(),
+		Archived:            repository.GetArchived(),
+	}, nil
 }
 
-func (c *client) UpdateRepository(ctx context.Context, owner, repo string, input *UpdateRepositoryInput) error {
+// UpdateRepository updates a GitHub repository.
+// https://developer.github.com/v3/repos/#update-a-repository
+func (c *client) UpdateRepository(ctx context.Context, owner, repo string, repository *Repository) error {
 	logger := c.logger.With(
 		zap.String("owner", owner),
 		zap.String("repo", repo),
-		zap.Any("update_repository_input", input),
-		zap.Bool("dry_run", c.dryRun),
+		zap.Any("repository", repository),
 	)
 
-	if !c.dryRun {
-		if _, err := c.httpClient.DoRequest(
-			ctx,
-			http.MethodPatch,
-			fmt.Sprintf("repos/%s/%s", owner, repo),
-			map[string]string{
-				"Content-Type":  "application/json",
-				"Authorization": fmt.Sprintf("token %s", c.githubToken),
-			},
-			input,
-		); err != nil {
-			logger.Error("failed to update repository", zap.Error(err))
-			return err
-		}
+	if _, err := c.httpClient.DoRequest(
+		ctx,
+		http.MethodPatch,
+		fmt.Sprintf("repos/%s/%s", owner, repo),
+		map[string]string{
+			"Content-Type":  "application/json",
+			"Authorization": fmt.Sprintf("token %s", c.githubToken),
+		},
+		repository,
+	); err != nil {
+		logger.Error("failed to update repository", zap.Error(err))
+		return err
 	}
 
 	logger.Debug("successfully updated repository")
+
 	return nil
 }

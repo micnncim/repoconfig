@@ -4,18 +4,17 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v31/github"
 
-	pkggithub "github.com/micnncim/repoconfig/pkg/github"
+	"github.com/micnncim/repoconfig/pkg/github"
 	"github.com/micnncim/repoconfig/pkg/survey"
 )
 
 func Test_askUpdateRepositoryInput(t *testing.T) {
 	fakeRepo := &github.Repository{
-		Name:             github.String("fake-repo"),
-		Description:      github.String("fake description"),
-		Private:          github.Bool(true),
-		AllowSquashMerge: github.Bool(false),
+		Name:             "fake-repo",
+		Description:      "fake description",
+		Private:          true,
+		AllowSquashMerge: false,
 	}
 
 	tests := []struct {
@@ -23,11 +22,11 @@ func Test_askUpdateRepositoryInput(t *testing.T) {
 		fakeAskInputMessages       map[string]string
 		fakeAskSelectMessages      map[string]string
 		fakeAskMultiSelectMessages map[string][]string
-		want                       *pkggithub.UpdateRepositoryInput
+		want                       *github.Repository
 		wantErr                    bool
 	}{
 		{
-			name: "get updated input",
+			name: "get updated repo",
 			fakeAskInputMessages: map[string]string{
 				surveyKeyDescription: "new description",
 			},
@@ -38,13 +37,21 @@ func Test_askUpdateRepositoryInput(t *testing.T) {
 			fakeAskMultiSelectMessages: map[string][]string{
 				askUpdateRepositoryInputMessage: {surveyKeyDescription, surveyKeyPrivate, surveyKeyAllowSquashMerge},
 			},
-			want: &pkggithub.UpdateRepositoryInput{
+			want: &github.Repository{
 				Name:             "fake-repo",
 				Description:      "new description",
 				Private:          false,
 				AllowSquashMerge: true,
 			},
 			wantErr: false,
+		},
+		{
+			name:                       "not get updated repo",
+			fakeAskInputMessages:       map[string]string{},
+			fakeAskSelectMessages:      map[string]string{},
+			fakeAskMultiSelectMessages: map[string][]string{},
+			want:                       nil,
+			wantErr:                    true,
 		},
 	}
 
@@ -61,13 +68,12 @@ func Test_askUpdateRepositoryInput(t *testing.T) {
 			}
 
 			got, err := askUpdateRepositoryInput(s, fakeRepo)
-			if err != nil {
-				t.Errorf("err: %v", err)
-				return
-
+			if (err != nil) != tt.wantErr {
+				t.Errorf("err = %v, wantErr %v", err, tt.wantErr)
 			}
+
 			if diff := cmp.Diff(tt.want, got); diff != "" {
-				t.Fatalf("(-want +got):\n%s", diff)
+				t.Errorf("(-want +got):\n%s", diff)
 			}
 		})
 	}

@@ -4,9 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v31/github"
 
-	pkggithub "github.com/micnncim/repoconfig/pkg/github"
+	"github.com/micnncim/repoconfig/pkg/github"
 	"github.com/micnncim/repoconfig/pkg/survey"
 	"github.com/spf13/cobra"
 )
@@ -19,26 +18,46 @@ func Test_app_run(t *testing.T) {
 
 	tests := []struct {
 		name                         string
-		fakeRepo                     *pkggithub.FakeRepository
-		fakeAskUpdateRepositoryInput func(survey.Surveyor, *github.Repository) (*pkggithub.UpdateRepositoryInput, error)
-		want                         *pkggithub.FakeRepository
+		fakeRepo                     *github.Repository
+		fakeAskUpdateRepositoryInput func(survey.Surveyor, *github.Repository) (*github.Repository, error)
+		want                         *github.Repository
 		wantErr                      bool
 	}{
 		{
 			name: "update repo",
-			fakeRepo: &pkggithub.FakeRepository{
-				Description: "fake description",
-				Private:     false,
+			fakeRepo: &github.Repository{
+				Description:      "fake description",
+				Private:          false,
+				AllowMergeCommit: true,
 			},
-			fakeAskUpdateRepositoryInput: func(survey.Surveyor, *github.Repository) (*pkggithub.UpdateRepositoryInput, error) {
-				return &pkggithub.UpdateRepositoryInput{
-					Description: "new description",
-					Private:     true,
+			fakeAskUpdateRepositoryInput: func(survey.Surveyor, *github.Repository) (*github.Repository, error) {
+				return &github.Repository{
+					Description:      "new description",
+					Private:          true,
+					AllowMergeCommit: false,
 				}, nil
 			},
-			want: &pkggithub.FakeRepository{
-				Description: "new description",
-				Private:     true,
+			want: &github.Repository{
+				Description:      "new description",
+				Private:          true,
+				AllowMergeCommit: false,
+			},
+			wantErr: false,
+		},
+		{
+			name: "not update repo",
+			fakeRepo: &github.Repository{
+				Description:      "fake description",
+				Private:          false,
+				AllowMergeCommit: true,
+			},
+			fakeAskUpdateRepositoryInput: func(survey.Surveyor, *github.Repository) (*github.Repository, error) {
+				return nil, ErrRepositoryNoChange
+			},
+			want: &github.Repository{
+				Description:      "fake description",
+				Private:          false,
+				AllowMergeCommit: true,
 			},
 			wantErr: false,
 		},
@@ -55,10 +74,11 @@ func Test_app_run(t *testing.T) {
 					askUpdateRepositoryInput = orgAskUpdateRepositoryInput
 				}()
 
-				githubClient := &pkggithub.FakeClient{
-					Repos: map[string]*pkggithub.FakeRepository{
-						fakeRepo: tt.fakeRepo,
-					},
+				githubClient := &github.FakeClient{
+					Repos: make(map[string]*github.Repository),
+				}
+				if tt.fakeRepo != nil {
+					githubClient.Repos[fakeRepo] = tt.fakeRepo
 				}
 
 				a := &app{
