@@ -90,7 +90,7 @@ func Test_app_run(t *testing.T) {
 
 			a := &app{
 				githubClient: fakeGithubClient,
-				spinner:      spinner.New(ioutil.Discard),
+				spinner:      spinner.New(spinner.WithWriter(ioutil.Discard)),
 			}
 
 			if err := a.run(&cobra.Command{}, []string{fakeOwner, tt.fakeRepo.Name}); (err != nil) != tt.wantErr {
