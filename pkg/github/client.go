@@ -105,10 +105,10 @@ func (c *client) UpdateRepository(ctx context.Context, owner, repo string, repos
 		zap.Any("repository", repository),
 	)
 
-	if _, err := c.httpClient.DoRequest(
+	if _, err := c.httpClient.Do(
 		ctx,
 		http.MethodPatch,
-		fmt.Sprintf("repos/%s/%s", owner, repo),
+		fmt.Sprintf("/repos/%s/%s", owner, repo),
 		map[string]string{
 			"Content-Type":  "application/json",
 			"Authorization": fmt.Sprintf("token %s", c.githubToken),
