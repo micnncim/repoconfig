@@ -2,39 +2,42 @@ package spinner
 
 import (
 	"io"
+	"os"
 
 	"github.com/caarlos0/spin"
 )
 
-type Spinner interface {
-	Start(msg string)
-	Stop()
-}
-
-type spinner struct {
+type Spinner struct {
 	s *spin.Spinner
 
-	w io.Writer
+	writer io.Writer
 }
 
-// Guarantee *spinner implements Spinner.
-var _ Spinner = (*spinner)(nil)
+type Option func(*Spinner)
 
-func New(w io.Writer) Spinner {
-	return &spinner{
-		w: w,
+func WithWriter(w io.Writer) Option {
+	return func(s *Spinner) { s.writer = w }
+}
+
+func New(opts ...Option) *Spinner {
+	s := &Spinner{
+		writer: os.Stdout,
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
-func (s *spinner) Start(msg string) {
+func (s *Spinner) Start(msg string) {
 	// Reset Spinner
 	s.s = spin.New(
 		"%s "+msg, // caarlos0/spin.Spinner.Start requires "%s" format as the pointer of indicator.
-		spin.WithWriter(s.w),
+		spin.WithWriter(s.writer),
 	) // reset spin.Spinner
 	s.s.Start()
 }
 
-func (s *spinner) Stop() {
+func (s *Spinner) Stop() {
 	s.s.Stop()
 }

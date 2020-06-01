@@ -18,7 +18,7 @@ import (
 
 type app struct {
 	githubClient github.Client
-	spinner      spinner.Spinner
+	spinner      *spinner.Spinner
 }
 
 type repository struct {
@@ -51,7 +51,7 @@ func NewCommand() (*cobra.Command, error) {
 
 	app := &app{
 		githubClient: githubClient,
-		spinner:      spinner.New(os.Stdout),
+		spinner:      spinner.New(),
 	}
 
 	cmd := &cobra.Command{
