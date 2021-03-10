@@ -3,7 +3,7 @@ module github.com/micnncim/repoconfig
 go 1.14
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.0.7
+	github.com/AlecAivazis/survey/v2 v2.2.9
 	github.com/caarlos0/spin v1.1.1-0.20200123125736-2bc438191c89
 	github.com/fatih/color v1.9.0
 	github.com/google/go-cmp v0.4.0
