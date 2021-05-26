@@ -10,9 +10,8 @@ require (
 	github.com/google/go-github/v31 v31.0.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5 // indirect
-	go.uber.org/zap v1.15.0
+	go.uber.org/zap v1.17.0
 	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9 // indirect
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 	golang.org/x/text v0.3.2 // indirect
-	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
